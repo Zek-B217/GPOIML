@@ -20,5 +20,6 @@ To run the project correctly, you will need:
 
 ### How to use it
 1. Use the button "Import data" and select a file that respects the format represented in the Excel;
-2. Click "Save data" to consolidate that values into the Excel;
-3. Use "Forecast next year" to generate a prediction of the next year.
+2. In the Excel, go into the "Development" tab and, into the VBA editor, change the paths of the first two constants;
+3. Click "Save data" to consolidate that values into the Excel;
+4. Use "Forecast next year" to generate a prediction of the next year.
