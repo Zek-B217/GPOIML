@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import torch
+import sys
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
@@ -11,9 +12,13 @@ from momentfm import MOMENTPipeline
 # ==========================================
 # 1. CONFIGURAZIONE E CARICAMENTO DATI
 # ==========================================
-CSV_FILE = "C:/Users/Filippo/Desktop/scuola/5DS/GPOI/Dati_ML.csv"
+CSV_FILE_IN = sys.argv[1];
+CSV_FILE_OUT = sys.argv[2];
+
+#debug CSV_FILE_IN = "C:/Users/Filippo/Desktop/scuola/5DS/GPOI/Data.csv";
+#debug CSV_FILE_OUT = "C:/Users/Filippo/Desktop/scuola/5DS/GPOI/Out.csv";
 # Utilizziamo latin1 per gestire i caratteri speciali di Excel/Windows
-df = pd.read_csv(CSV_FILE, encoding='latin1')
+df = pd.read_csv(CSV_FILE_IN, encoding='latin1').iloc[:-1]
 
 # Parametri modello
 CONTEXT_SIZE = 5   # Anni passati da osservare
@@ -62,7 +67,7 @@ dataloader = DataLoader(dataset, batch_size=min(4, len(dataset)), shuffle=True)
 # ==========================================
 # 3. CARICAMENTO MODELLO E FINE-TUNING
 # ==========================================
-print(f"Inizializzo MOMENT per il {TARGET_YEAR}...")
+print(f"Initializing year {TARGET_YEAR}...")
 model = MOMENTPipeline.from_pretrained(
     "AutonLab/MOMENT-1-large", 
     model_kwargs={"task_name": "forecasting", "forecast_horizon": HORIZON, "n_channels": N_CHANNELS}
@@ -77,8 +82,9 @@ optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), l
 criterion = nn.MSELoss()
 
 model.train()
-print("Inizio Addestramento...")
-for epoch in range(30):
+print("Starting training...")
+epochNum = 30
+for epoch in range(epochNum):
     total_loss = 0
     for batch_x, batch_mask, batch_y in dataloader:
         optimizer.zero_grad()
@@ -87,8 +93,7 @@ for epoch in range(30):
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
-    if (epoch+1) % 5 == 0:
-        print(f"Epoca {epoch+1}/30 - Loss: {total_loss/len(dataloader):.4f}")
+    print(f"Epoch {epoch+1}/{epochNum} - Loss: {total_loss/len(dataloader):.4f}")
 
 # ==========================================
 # 4. CALCOLO METRICHE (Accuracy, Precision, Recall, CM)
@@ -116,7 +121,7 @@ print(confusion_matrix(y_true_bin, y_pred_bin))
 # ==========================================
 # 5. PREVISIONE FINALE 2026 E SALVATAGGIO
 # ==========================================
-print("\nGenerazione previsioni finali...")
+print("\nGenerating final report...")
 ultimi_dati = dataset.scaler.transform(features_df.tail(CONTEXT_SIZE).values)
 
 x_inf = np.zeros((SEQ_LEN, N_CHANNELS))
@@ -137,8 +142,6 @@ anni_futuri = [ultimo_anno_csv + i for i in range(1, HORIZON + 1)]
 df_out = pd.DataFrame(pred_final, columns=features_df.columns)
 df_out.insert(0, 'Anno', anni_futuri)
 
-df_out.to_csv('Previsioni_MOMENT_2026.csv', index=False, encoding='latin1')
+df_out.to_csv(CSV_FILE_OUT, index=False, encoding='latin1')
 print("--------------------------------------------------")
-print("File 'Previsioni_MOMENT_2026.csv' salvato correttamente.")
-print("Previsione specifica per il 2026:")
-print(df_out[df_out['Anno'] == 2026])
+print("Data saved correctly")
